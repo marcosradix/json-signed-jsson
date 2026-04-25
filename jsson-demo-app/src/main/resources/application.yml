@@ -1,0 +1,10 @@
+server:
+  port: 8080
+
+jsson:
+  enabled: true
+  security:
+    # Valid Cryptographic Test Pair (Ed25519 PKCS#8 & X.509)
+    # Generated internally via simulator (OpenSSL format) exclusively for the Demo.
+    private-key-path: classpath:private-key.pem
+    public-key-path: classpath:public-key.pem
