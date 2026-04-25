@@ -131,28 +131,62 @@ public void execute(@RequestBody @JssonVerify Transaction tx) {
 ```
 
 ### Testing the Demo App Locally
-You can quickly run the demo and test the full cycle using these `cURL` commands:
+You can test the full cryptographic lifecycle using these `cURL` commands:
 
-1. **Acquire a Signed Payload (GET)**:
+#### 1. Acquire a Tokenized Selective Payload
+This endpoint excludes the `service` field from the signature but includes it in the response.
 ```bash
-curl -s http://localhost:8080/api/orders/ORDER-123
+curl -s http://localhost:8080/api/orders/123 | jq .
+```
+**Response**:
+```json
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM_UNLIMITED",
+  "price": 39.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzphbGx8ZXhjOltzZXJ2aWNlXQ.cEfr0dgd..."
+  }
+}
 ```
 
-2. **Submit Authentic Payload (POST)**:
-Paste the JSON response from step 1 exactly as received.
+#### 2. Submit Authentic Payload
+The server decodes the boundary from the `sig` token and validates the data.
 ```bash
 curl -X POST http://localhost:8080/api/orders/process \
   -H "Content-Type: application/json" \
-  -d '{"orderId":"ORDER-123","service":"5G_PREMIUM_UNLIMITED","price":39.99,"$jsson":{"v":"1","alg":"Ed25519","sig":"YOUR_SIGNATURE_HERE"}}'
+  -d '{
+    "orderId": "123",
+    "service": "5G_PREMIUM_UNLIMITED",
+    "price": 39.99,
+    "$jsson": {
+      "v": "1",
+      "alg": "Ed25519",
+      "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714..."
+    }
+  }'
 ```
+**Status**: `200 OK`
 
-3. **Submit Forged Payload (Blocked)**:
-Change the `price` to `0.0`. The cryptographic signature verification will immediately fail and reject it with a `403 Forbidden`.
+#### 3. Submit Forged Payload (Blocked)
+Changing the `price` from `39.99` to `1.99` results in a cryptographic violation.
 ```bash
-curl -w "\nHTTP_STATUS:%{http_code}\n" -X POST http://localhost:8080/api/orders/process \
+curl -i -X POST http://localhost:8080/api/orders/process \
   -H "Content-Type: application/json" \
-  -d '{"orderId":"ORDER-123","service":"5G_PREMIUM_UNLIMITED","price":0.0,"$jsson":{"v":"1","alg":"Ed25519","sig":"YOUR_SIGNATURE_HERE"}}'
+  -d '{
+    "orderId": "123",
+    "service": "5G_PREMIUM_UNLIMITED",
+    "price": 1.99,
+    "$jsson": {
+      "v": "1",
+      "alg": "Ed25519",
+      "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714..."
+    }
+  }'
 ```
+**Status**: `403 Forbidden` (JSSON Fraud Lock triggered)
 
 ## 🧠 How does the algorithm work in practice? (Under the Hood)
 

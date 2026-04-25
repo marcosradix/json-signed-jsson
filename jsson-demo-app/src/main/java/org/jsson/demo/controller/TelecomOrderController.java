@@ -18,6 +18,12 @@ public class TelecomOrderController {
         return new TelecomOrder(id, "5G_PREMIUM_UNLIMITED", 39.99);
     }
 
+    @GetMapping("/service/{id}")
+    @JssonSign(excludes = { "service" })
+    public TelecomOrder getOrderService(@PathVariable("id") String id) {
+        return new TelecomOrder(id, "5G_PREMIUM_UNLIMITED", 39.99);
+    }
+
     @GetMapping("/all/{id}")
     @JssonSign
     public TelecomOrder getOrderAllFields(@PathVariable("id") String id) {

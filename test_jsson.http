@@ -28,7 +28,23 @@ Content-Type: application/json
   "$jsson": {
     "v": "1",
     "alg": "Ed25519",
-    "sig": "fGluYzphbGw.6Te7MtRnisuvqSf7-pY9K4v59_0GINe8Ksksg5OmpX-AZMWB5GF6B6z3xHbOguKpcpSAeu5Ipy1YTk0mgiVpBA"
+    "sig": "fGluYzphbGx8ZXhjOltzZXJ2aWNlXQ.cEfr0dgdSU_lzL-tO4Fq3XeGhHZw6AT1wc6CsznmfErkszBa6MD75PkCrE9XwtFeQj-8Qyre1mo1hD0UFOTUCQ"
+  }
+}
+
+### 2.1 Tamper the signature
+# Send a correctly signed payload.
+# If you get a 403, ensure the signature matches the canonicalized data.
+POST {{baseUrl}}/api/orders/process
+Content-Type: application/json
+
+{
+  "orderId": "123",
+  "price": 39.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzphbGx8ZXhjOltzZXJ2aWNlXQ.cEfr0dgdSU_lzL-tO4Fq3XeGhHZw6AT1wc6CsznmfErkszBa6MD75PkCrE9XwtFeQj-8Qyre1mo1hD0UFOTUCQ"
   }
 }
 

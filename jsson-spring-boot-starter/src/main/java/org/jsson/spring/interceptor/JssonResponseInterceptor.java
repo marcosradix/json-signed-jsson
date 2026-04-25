@@ -85,6 +85,8 @@ public class JssonResponseInterceptor implements ResponseBodyAdvice<Object> {
                 }
             }
 
+            logger.debug("JSSON Sign Policy - Includes: {}, Excludes: {}", includes, excludes);
+
             // 1. Canonicalize and Sort (using selective boundaries if provided)
             String canonicalData = JssonC.canonicalize(body, includes, excludes);
 
