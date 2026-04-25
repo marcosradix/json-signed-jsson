@@ -102,6 +102,30 @@ public void execute(@RequestBody @JssonVerify Transaction tx) {
 }
 ```
 
+### Testing the Demo App Locally
+You can quickly run the demo and test the full cycle using these `cURL` commands:
+
+1. **Acquire a Signed Payload (GET)**:
+```bash
+curl -s http://localhost:8080/api/orders/ORDER-123
+```
+
+2. **Submit Authentic Payload (POST)**:
+Paste the JSON response from step 1 exactly as received.
+```bash
+curl -X POST http://localhost:8080/api/orders/process \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":"ORDER-123","service":"5G_PREMIUM_UNLIMITED","price":39.99,"$jsson":{"v":"1","alg":"Ed25519","sig":"YOUR_SIGNATURE_HERE"}}'
+```
+
+3. **Submit Forged Payload (Blocked)**:
+Change the `price` to `0.0`. The cryptographic signature verification will immediately fail and reject it with a `403 Forbidden`.
+```bash
+curl -w "\nHTTP_STATUS:%{http_code}\n" -X POST http://localhost:8080/api/orders/process \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":"ORDER-123","service":"5G_PREMIUM_UNLIMITED","price":0.0,"$jsson":{"v":"1","alg":"Ed25519","sig":"YOUR_SIGNATURE_HERE"}}'
+```
+
 ## 🧠 How does the algorithm work in practice? (Under the Hood)
 
 For Canonicalization to be infallible, the engine transforms any JSON object into a *Deterministic String* (clean and ordered) before calculating its hash and applying the signature. The secret in the Java ecosystem lies in the strict configuration of the `ObjectMapper` (Jackson) and the use of Spring Interceptors.
