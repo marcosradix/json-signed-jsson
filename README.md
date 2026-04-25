@@ -67,12 +67,23 @@ JSSON supports **Selective Field Signing**, allowing you to protect critical fie
 To keep the JSON root clean and secure, JSSON uses a **Tokenized Signature** format.
 
 ### The Signature Token (`sig`)
-Instead of cluttering your JSON with metadata, the signing boundary (the list of included/excluded fields) is packed directly into the signature string:
+Instead of cluttering your JSON with metadata, the signing boundary (the list of included/excluded fields) is packed directly into the signature string using a **dot-separated token** format.
 
-**Format**: `base64(boundary_metadata).raw_signature`
+#### Token Anatomy
+A JSSON signature string consists of two Base64Url segments:
+`sig: [BOUNDARY_METADATA].[CRYPTOGRAPHIC_SIGNATURE]`
 
-*   **Boundary Binding**: The metadata is cryptographically bound to the hash input. If anyone tries to modify the token to change the signing boundary, the verification will fail.
-*   **Clean Data**: Your JSON remains 100% standard and readable.
+1.  **Segment 1: Boundary Metadata**
+    *   **Value**: `fGluYzpbb3JkZXJJZCwgcHJpY2Vd`
+    *   **Decoded**: `|inc:[orderId, price]`
+    *   **Purpose**: Tells the verifier exactly which fields were hashed by the signer. This makes the payload **self-describing**.
+2.  **Segment 2: Cryptographic Signature**
+    *   **Value**: `MWdh714nVZe6TAhe91K91NDNC_6UmHRK_kbAm7FYeJlI8_j0pjtLNiHZouyGszMUQfbYPEWsXiN90mayirFQCA`
+    *   **Algorithm**: Ed25519
+    *   **Purpose**: Proves that both the data **and** the boundary metadata have not been tampered with.
+
+> [!TIP]
+> This structure is inspired by JWT (JSON Web Tokens) but optimized for raw JSON canonicalization instead of header/payload separation.
 
 ### Example: Tokenized Signed Payload
 ```json
