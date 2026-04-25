@@ -10,16 +10,27 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/orders")
 public class TelecomOrderController {
 
-    // Simulates legacy API or remote Operator provisioner that now magically injects our signature
+    // Simulates legacy API or remote Operator provisioner that now magically
+    // injects our signature
     @GetMapping("/{id}")
-    @JssonSign
+    @JssonSign(includes = { "orderId", "price" })
     public TelecomOrder getOrder(@PathVariable("id") String id) {
         return new TelecomOrder(id, "5G_PREMIUM_UNLIMITED", 39.99);
     }
 
-    // Receives Payload from Client/EdgeRouter and automatically blocks violated or modified payloads in TCP/IP
+    @GetMapping("/all/{id}")
+    @JssonSign
+    public TelecomOrder getOrderAllFields(@PathVariable("id") String id) {
+        return new TelecomOrder(id, "5G_PREMIUM_UNLIMITED", 39.99);
+    }
+
+    // Receives Payload from Client/EdgeRouter and automatically blocks violated or
+    // modified payloads in TCP/IP
+    @JssonSign(includes = { "orderId", "price" })
     @PostMapping("/process")
-    public ResponseEntity<String> processOrder(@RequestBody @JssonVerify TelecomOrder order) {
-        return ResponseEntity.ok("Authentic Package Processed Successfully: " + order.orderId() + " (" + order.service() + ")");
+    public ResponseEntity<TelecomOrder> processOrder(
+            @RequestBody @JssonVerify TelecomOrder order) {
+        return ResponseEntity
+                .ok(order);
     }
 }

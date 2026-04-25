@@ -12,4 +12,15 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JssonSign {
+    /**
+     * Optional: Specify fields that MUST be included in the JSSON signature.
+     * All other root fields will be ignored.
+     */
+    String[] includes() default {};
+
+    /**
+     * Optional: Specify fields that MUST be excluded from the JSSON signature.
+     * Overrides includes if there are conflicts.
+     */
+    String[] excludes() default {};
 }

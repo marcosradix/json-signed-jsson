@@ -8,3 +8,6 @@ jsson:
     # Generated internally via simulator (OpenSSL format) exclusively for the Demo.
     private-key-path: classpath:private-key.pem
     public-key-path: classpath:public-key.pem
+logging:
+  level:
+    org.jsson: DEBUG

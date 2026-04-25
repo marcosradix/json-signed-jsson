@@ -61,6 +61,34 @@ If an attacker (man-in-the-middle or internal fraud in a legacy system) intercep
 
 This eliminates costly data reconciliations between microservices; JSSON documentation does not trust the origin of the journey (TLS or IP transport), but solely validates what it is transporting — 100% *Offline-First*.
 
+## 🎯 Selective Signing & Tokenized Signatures
+JSSON supports **Selective Field Signing**, allowing you to protect critical fields (like `price` or `orderId`) while leaving others mutable. 
+
+To keep the JSON root clean and secure, JSSON uses a **Tokenized Signature** format.
+
+### The Signature Token (`sig`)
+Instead of cluttering your JSON with metadata, the signing boundary (the list of included/excluded fields) is packed directly into the signature string:
+
+**Format**: `base64(boundary_metadata).raw_signature`
+
+*   **Boundary Binding**: The metadata is cryptographically bound to the hash input. If anyone tries to modify the token to change the signing boundary, the verification will fail.
+*   **Clean Data**: Your JSON remains 100% standard and readable.
+
+### Example: Tokenized Signed Payload
+```json
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM",
+  "price": 39.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714nVZe6..."
+  }
+}
+```
+*(The `sig` field now acts as a self-describing cryptographic proof.)*
+
 ## 🍃 Integration with Java Spring Boot
 JSSON was designed to be transparent for the developer through the `jsson-spring-boot-starter`.
 
@@ -131,74 +159,47 @@ curl -w "\nHTTP_STATUS:%{http_code}\n" -X POST http://localhost:8080/api/orders/
 For Canonicalization to be infallible, the engine transforms any JSON object into a *Deterministic String* (clean and ordered) before calculating its hash and applying the signature. The secret in the Java ecosystem lies in the strict configuration of the `ObjectMapper` (Jackson) and the use of Spring Interceptors.
 
 ### 1. The Canonicalization Core (`JssonC`)
-The main class configures Jackson to alphabetically order any key and minify the data output, eradicating discrepancies arising from "pretty prints".
+The engine transforms any JSON object into a *Deterministic String* (clean and ordered) and then **appends the signing boundary** before calculating the final hash.
 
 ```java
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import java.util.TreeMap;
-
 public class JssonC {
-    private static final ObjectMapper canonicalMapper;
+    // ... setup canonicalMapper ...
 
-    static {
-        canonicalMapper = new ObjectMapper();
-        // Forces alphabetical sorting of keys and properties
-        canonicalMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-        canonicalMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
-        // Removes spaces, tabs, and line breaks (mandatory minification)
-        canonicalMapper.configure(SerializationFeature.INDENT_OUTPUT, false);
-    }
-
-    public static String canonicalize(Object input) throws Exception {
-        // Converts to a TreeMap to force natural alphabetical consistency and recursion
-        Object sortedObject = canonicalMapper.convertValue(input, TreeMap.class);
-        return canonicalMapper.writeValueAsString(sortedObject);
+    public static String canonicalize(Object input, Set<String> includes, Set<String> excludes) {
+        // 1. Minify and Sort Keys
+        String jsonResult = canonicalMapper.writeValueAsString(convertToSortedMap(input));
+        
+        // 2. Append Boundary Metadata (Boundary Binding)
+        StringBuilder hashInput = new StringBuilder(jsonResult);
+        if (includes != null && !includes.isEmpty()) {
+            hashInput.append("|inc:").append(new TreeSet<>(includes));
+        } else {
+            hashInput.append("|inc:all");
+        }
+        
+        return hashInput.toString(); // This is what gets signed
     }
 }
 ```
 
 ### 2. Spring Automation Magic (`JssonResponseInterceptor`)
-To validate perfectly across APIs and services, the `JssonResponseInterceptor` acts as an invisible middleware. It intercepts the response originated by the API, applies the canonicalization engine to it, generates the cryptographic signature, and returns the formatted JSSON without you having to modify the controller-level code.
+The interceptor automates the signing process, tokenizes the metadata, and injects the resident `$jsson` proof.
 
 ```java
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
-// (other imports...)
+public Object beforeBodyWrite(...) {
+    // 1. Canonicalize with boundaries
+    String canonicalData = JssonC.canonicalize(body, includes, excludes);
 
-@ControllerAdvice
-public class JssonResponseInterceptor implements ResponseBodyAdvice<Object> {
+    // 2. Cryptographic Signature
+    String rawSig = CryptoService.sign(canonicalData, privateKey); 
 
-    @Override
-    public boolean supports(MethodParameter returnType, Class converterType) {
-        // Intercepts only resources marked with the annotation
-        return returnType.hasMethodAnnotation(JssonSign.class); 
-    }
+    // 3. Tokenize (Boundary + Signature)
+    String boundary = JssonC.buildBoundaryString(includes, excludes);
+    String token = Base64.encode(boundary) + "." + rawSig;
 
-    @Override
-    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType contentType,
-                                  Class converterType, ServerHttpRequest req, ServerHttpResponse res) {
-        try {
-            // 1. Generates the rigorous Canonical String via JSSON-C source code
-            String canonicalData = JssonC.canonicalize(body);
-
-            // 2. Performs the cryptographic signature of this pure data using private key (Ed25519)
-            String signature = CryptoService.sign(canonicalData, privateKey); 
-
-            // 3. Assembles and alters the original response by coupling the proof/security branch ($jsson)
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode finalNode = mapper.valueToTree(body);
-            ObjectNode proofNode = finalNode.putObject("$jsson");
-            proofNode.put("v", "1");
-            proofNode.put("alg", "Ed25519");
-            proofNode.put("sig", signature);
-
-            return finalNode;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate confidential JSSON signatures", e);
-        }
-    }
+    // 4. Inject $jsson proof
+    proofNode.put("sig", token);
+    return finalNode;
 }
 ```
 

@@ -1,0 +1,86 @@
+### JSSON API Tests
+@baseUrl = http://localhost:8080
+
+### 1. Get Signed Order All Fields
+# This endpoint returns a signed JSON using @JssonSign
+GET {{baseUrl}}/api/orders/all/123
+Accept: application/json
+
+###
+
+### 1.1. Get Signed Order Only Selected Fields
+# This endpoint returns a signed JSON using @JssonSign
+GET {{baseUrl}}/api/orders/123
+Accept: application/json
+
+###
+
+### 2. Process Valid Order
+# Send a correctly signed payload.
+# If you get a 403, ensure the signature matches the canonicalized data.
+POST {{baseUrl}}/api/orders/process
+Content-Type: application/json
+
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM_UNLIMITED",
+  "price": 39.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzphbGw.6Te7MtRnisuvqSf7-pY9K4v59_0GINe8Ksksg5OmpX-AZMWB5GF6B6z3xHbOguKpcpSAeu5Ipy1YTk0mgiVpBA"
+  }
+}
+
+### 2.1 Process Valid Order
+# Send a correctly signed payload.
+# If you get a 403, ensure the signature matches the canonicalized data.
+POST {{baseUrl}}/api/orders/process
+Content-Type: application/json
+
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM_UNLIMITED",
+  "price": 39.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714nVZe6TAhe91K91NDNC_6UmHRK_kbAm7FYeJlI8_j0pjtLNiHZouyGszMUQfbYPEWsXiN90mayirFQCA"
+  }
+}
+
+###
+
+### 3. Process Tampered Order (Price changed)
+# Changing the price from 39.99 to 1.99 should result in 403 Forbidden.
+POST {{baseUrl}}/api/orders/process
+Content-Type: application/json
+
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM_UNLIMITED",
+  "price": 1.99,
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714nVZe6TAhe91K91NDNC_6UmHRK_kbAm7FYeJlI8_j0pjtLNiHZouyGszMUQfbYPEWsXiN90mayirFQCA"
+  }
+}
+
+###
+
+### 4. Process Stripped Order (Required field missing from signature)
+# Removing 'price' from 'inc' should result in 403 Forbidden (Selective-Stripping detection).
+POST {{baseUrl}}/api/orders/process
+Content-Type: application/json
+
+{
+  "orderId": "123",
+  "service": "5G_PREMIUM_UNLIMITED",
+
+  "$jsson": {
+    "v": "1",
+    "alg": "Ed25519",
+    "sig": "fGluYzpbb3JkZXJJZCwgcHJpY2Vd.MWdh714nVZe6TAhe91K91NDNC_6UmHRK_kbAm7FYeJlI8_j0pjtLNiHZouyGszMUQfbYPEWsXiN90mayirFQCA"
+  }
+}

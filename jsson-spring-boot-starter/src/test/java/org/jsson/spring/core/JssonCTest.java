@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -35,5 +37,45 @@ public class JssonCTest {
         String result = JssonC.canonicalize(inputMap);
         
         assertEquals(expected, result, "Canonicalization (JSSON-C) failed on ordering or master formatting!");
+    }
+
+    @Test
+    public void mustRespectIncludesFilter() throws JsonProcessingException {
+        Map<String, Object> inputMap = new HashMap<>();
+        inputMap.put("status", "active");
+        inputMap.put("value", 29.9);
+        inputMap.put("A-key", "First");
+        
+        Set<String> includes = new HashSet<>(Arrays.asList("status", "value"));
+        
+        String expected = "{\"status\":\"active\",\"value\":29.9}";
+        String result = JssonC.canonicalize(inputMap, includes, null);
+        
+        assertEquals(expected, result, "Canonicalization failed to apply includes filter!");
+    }
+
+    @Test
+    public void mustRespectExcludesFilter() throws JsonProcessingException {
+        Map<String, Object> inputMap = new HashMap<>();
+        inputMap.put("status", "active");
+        inputMap.put("value", 29.9);
+        inputMap.put("A-key", "First");
+        
+        Set<String> excludes = new HashSet<>(Arrays.asList("status"));
+        
+        String expected = "{\"A-key\":\"First\",\"value\":29.9}";
+        String result = JssonC.canonicalize(inputMap, null, excludes);
+        
+        assertEquals(expected, result, "Canonicalization failed to apply excludes filter!");
+    }
+
+    @Test
+    public void prepareForVerificationMustExtractIncAndExc() throws JsonProcessingException {
+        String rawJson = "{\"A-key\":\"First\",\"status\":\"active\",\"value\":29.9,\"$jsson\":{\"inc\":[\"status\",\"value\"],\"sig\":\"test\"}}";
+        
+        String expectedCanonical = "{\"status\":\"active\",\"value\":29.9}";
+        String result = JssonC.prepareForVerification(rawJson);
+        
+        assertEquals(expectedCanonical, result, "prepareForVerification failed to extract and apply 'inc' from $jsson!");
     }
 }

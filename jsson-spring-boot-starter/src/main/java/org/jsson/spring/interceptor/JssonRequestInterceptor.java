@@ -11,6 +11,8 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.RequestBodyAdviceAdapter;
 
@@ -22,6 +24,9 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PublicKey;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Controller Advice that intercepts payloads to validate based
@@ -30,6 +35,7 @@ import java.security.PublicKey;
 @ControllerAdvice
 public class JssonRequestInterceptor extends RequestBodyAdviceAdapter {
 
+    private static final Logger logger = LoggerFactory.getLogger(JssonRequestInterceptor.class);
     private final JssonProperties properties;
     private final ObjectMapper basicMapper = new ObjectMapper();
     private PublicKey publicKey;
@@ -69,10 +75,17 @@ public class JssonRequestInterceptor extends RequestBodyAdviceAdapter {
                 throw new SecurityException("JSSON Body Malformed: Reserved $jsson field missing or incomplete.");
             }
 
-            String signatureRecv = proofNode.get("sig").asText();
+            String signatureToken = proofNode.get("sig").asText();
+            String rawSignature = signatureToken;
+            
+            // If it's a tokenized signature, extract the raw signature part (the second segment)
+            if (signatureToken.contains(".")) {
+                rawSignature = signatureToken.split("\\.")[1];
+            }
+
             String canonicalData = JssonC.prepareForVerification(rawBody);
             
-            if (!CryptoService.verify(canonicalData, signatureRecv, publicKey)) {
+            if (!CryptoService.verify(canonicalData, rawSignature, publicKey)) {
                 throw new SecurityException("JSSON Fraud Lock: Corrupted data or signature cryptographically violated via key mismatch.");
             }
             
