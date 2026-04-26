@@ -264,4 +264,35 @@ public Object beforeBodyWrite(...) {
 ## 📝 License
 Distributed under the Apache 2.0 license. Total freedom for the community and the industry.
 
+## 💡 Bonus: OpenAPI Generator Integration
+
+JSSON can be seamlessly integrated into auto-generated APIs using **OpenAPI Generator**.
+
+Instead of cluttering your controller implementation with security annotations, you can define your `@JssonSign` constraints directly inside your OpenAPI specification. By utilizing the `x-operation-extra-annotation` vendor extension, the OpenAPI Generator automatically propagates these constraints to your Spring Boot interfaces.
+
+### Example configuration (`openapi.yaml`):
+```yaml
+paths:
+  /api/orders/{id}:
+    get:
+      summary: Get Order
+      operationId: getOrder
+      x-operation-extra-annotation: '@org.jsson.spring.annotation.JssonSign(includes = { "orderId", "price" })'
+      responses:
+        '200':
+          description: Successful response
+```
+
+### Why does this work without custom templates?
+As of **OpenAPI Generator v7.4.0** (Spring generator), the `x-operation-extra-annotation` is supported **natively out-of-the-box**. The generated `ApiApi` (or corresponding interface) will automatically inherit the annotation:
+
+```java
+@RequestMapping(method = RequestMethod.GET, value = "/api/orders/{id}")
+@org.jsson.spring.annotation.JssonSign(includes = { "orderId", "price" })
+default ResponseEntity<TelecomOrder> getOrder(...) {
+    // ...
+}
+```
+This enables a true "contract-first" architecture, where both schema validation (`@NotNull`, `@Min`) and cryptographic boundaries (`@JssonSign`) are strictly defined and maintained at the API specification level!
+
 #OpenSource #DataIntegrity #JSSON #JavaSpring #CyberSecurity

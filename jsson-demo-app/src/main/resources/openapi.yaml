@@ -1,0 +1,102 @@
+openapi: 3.0.3
+info:
+  title: JSSON Demo API
+  version: 1.0.0
+paths:
+  /api/orders/{id}:
+    get:
+      tags:
+        - Orders
+      x-operation-extra-annotation: '@org.jsson.spring.annotation.JssonSign(includes = { "orderId", "price" })'
+      summary: Get Order
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelecomOrder'
+  /api/orders/service/{id}:
+    get:
+      tags:
+        - Orders
+      x-operation-extra-annotation: '@org.jsson.spring.annotation.JssonSign(excludes = { "service" })'
+      summary: Get Order Service
+      operationId: getOrderService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelecomOrder'
+  /api/orders/all/{id}:
+    get:
+      tags:
+        - Orders
+      x-operation-extra-annotation: '@org.jsson.spring.annotation.JssonSign'
+      summary: Get Order All Fields
+      operationId: getOrderAllFields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelecomOrder'
+  /api/orders/process:
+    post:
+      tags:
+        - Orders
+      x-operation-extra-annotation: '@org.jsson.spring.annotation.JssonSign(includes = { "orderId", "price" })'
+      summary: Process Order
+      operationId: processOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelecomOrder'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelecomOrder'
+
+components:
+  schemas:
+    TelecomOrder:
+      type: object
+      required:
+        - orderId
+        - price
+      properties:
+        orderId:
+          type: string
+        service:
+          type: string
+        price:
+          type: number
+          format: double
+          minimum: 0
