@@ -264,4 +264,7 @@ public Object beforeBodyWrite(...) {
 ## 📝 License
 Distributed under the Apache 2.0 license. Total freedom for the community and the industry.
 
+## 💡 OpenAPI Generator
+JSSON supports contract-first development! Check the `open-api-swagger-code-gen` branch to see how to integrate JSSON with OpenAPI Generator v7.4.0 using native `x-operation-extra-annotation` support.
+
 #OpenSource #DataIntegrity #JSSON #JavaSpring #CyberSecurity
